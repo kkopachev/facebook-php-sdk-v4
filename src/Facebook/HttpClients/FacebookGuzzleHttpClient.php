@@ -28,6 +28,7 @@ use Facebook\FacebookSDKException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\AdapterException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Message\ResponseInterface;
 
 class FacebookGuzzleHttpClient implements FacebookHttpable {
 
@@ -119,10 +120,10 @@ class FacebookGuzzleHttpClient implements FacebookHttpable {
     try {
       $rawResponse = self::$guzzleClient->send($request);
     } catch (RequestException $e) {
-      if ($e->getPrevious() instanceof AdapterException) {
+      $rawResponse = $e->getResponse();
+      if ($e->getPrevious() instanceof AdapterException || !$rawResponse instanceof ResponseInterface) {
         throw new FacebookSDKException($e->getMessage(), $e->getCode());
       }
-      $rawResponse = $e->getResponse();
     }
 
     $this->responseHttpStatusCode = $rawResponse->getStatusCode();

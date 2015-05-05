@@ -8,7 +8,9 @@ use Facebook\HttpClients\FacebookGuzzleHttpClient;
 class FacebookGuzzleHttpClientTest extends AbstractTestHttpClient
 {
 
+  /** @var  \Mockery\MockInterface */
   protected $guzzleMock;
+  /** @var  FacebookGuzzleHttpClient */
   protected $guzzleClient;
 
   public function setUp()
@@ -85,6 +87,52 @@ class FacebookGuzzleHttpClientTest extends AbstractTestHttpClient
                           null,
                           m::mock('GuzzleHttp\Exception\AdapterException'),
                         ));
+
+    $responseMock = m::mock('GuzzleHttp\Message\ResponseInterface');
+
+    $exceptionMock
+        ->shouldReceive('getResponse')
+        ->once()
+        ->andReturn($responseMock);
+
+    $this->guzzleMock
+      ->shouldReceive('createRequest')
+      ->once()
+      ->with('GET', 'http://foo.com/', m::on(function($arg) {
+            if (1 !== preg_match('/.+\/certs\/DigiCertHighAssuranceEVRootCA\.pem$/', $arg['verify'])) {
+              return false;
+            }
+            return true;
+          }))
+      ->andReturn($requestMock);
+
+    $this->guzzleMock
+      ->shouldReceive('send')
+      ->once()
+      ->with($requestMock)
+      ->andThrow($exceptionMock);
+
+    $this->guzzleClient->send('http://foo.com/');
+  }
+
+  /**
+   * @expectedException \Facebook\FacebookSDKException
+   */
+  public function testThrowsExceptionOnExceptionNoResponse()
+  {
+    $requestMock = m::mock('GuzzleHttp\Message\RequestInterface');
+    $exceptionMock = m::mock(
+                      'GuzzleHttp\Exception\RequestException',
+                        array(
+                          'Foo Error',
+                          $requestMock,
+                          null
+                        ));
+
+    $exceptionMock
+        ->shouldReceive('getResponse')
+        ->once()
+        ->andReturnNull();
 
     $this->guzzleMock
       ->shouldReceive('createRequest')
